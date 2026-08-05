@@ -12,7 +12,7 @@ const entrySchema = new mongoose.Schema({
   salary: { type: Number, required: true },
   amount: { type: Number, required: true },
   createdAt: { type: Date, default: Date.now }
-});
+}, { collection: 'entries' });
 
 const Entry = mongoose.model("Entry", entrySchema);
 
@@ -25,8 +25,11 @@ async function connectToDatabase() {
   }
   
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log("Connected to MongoDB Atlas via Mongoose");
+    // Explicitly set dbName to match the previous 'entries_db'
+    await mongoose.connect(process.env.MONGODB_URI, {
+      dbName: 'entries_db'
+    });
+    console.log("Connected to MongoDB Atlas (entries_db) via Mongoose");
   } catch (error) {
     console.error("MongoDB connection error:", error);
     throw error;
