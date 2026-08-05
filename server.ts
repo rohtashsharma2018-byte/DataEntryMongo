@@ -27,9 +27,10 @@ async function connectToDatabase() {
   try {
     // Explicitly set dbName to match the previous 'entries_db'
     await mongoose.connect(process.env.MONGODB_URI, {
-      dbName: 'entries_db'
+      dbName: 'entries_db',
+      bufferCommands: false, // Recommended for serverless to fail fast
     });
-    console.log("Connected to MongoDB Atlas (entries_db) via Mongoose");
+    console.log(`Connected to MongoDB Atlas (entries_db) via Mongoose. Collection: entries`);
   } catch (error) {
     console.error("MongoDB connection error:", error);
     throw error;
@@ -47,6 +48,7 @@ async function startServer() {
     try {
       await connectToDatabase();
       const entries = await Entry.find().sort({ createdAt: -1 });
+      console.log(`Found ${entries.length} entries in database`);
       res.json(entries);
     } catch (error) {
       console.error("GET /api/entries error:", error);

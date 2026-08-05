@@ -26,9 +26,15 @@ export default function App() {
     try {
       const response = await fetch('/api/entries');
       const data = await response.json();
-      setEntries(data);
+      if (Array.isArray(data)) {
+        setEntries(data);
+      } else {
+        console.error("API returned non-array data:", data);
+        setError("Failed to load entries from server");
+      }
     } catch (err) {
       console.error("Failed to fetch entries", err);
+      setError("Network error: Could not reach the server");
     } finally {
       setTableLoading(false);
     }
