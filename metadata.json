@@ -1,0 +1,6 @@
+{
+  "name": "Simple Data Entry Form",
+  "description": "A simple form to add entries and view them in a table.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
