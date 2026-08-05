@@ -1,22 +1,36 @@
 import express from "express";
 import path from "path";
-import { MongoClient } from "mongodb";
+import mongoose from "mongoose";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-let dbClient: MongoClient | null = null;
+// Schema definition
+const entrySchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  salary: { type: Number, required: true },
+  amount: { type: Number, required: true },
+  createdAt: { type: Date, default: Date.now }
+});
 
-async function getCollection() {
+const Entry = mongoose.model("Entry", entrySchema);
+
+// Connection helper
+async function connectToDatabase() {
+  if (mongoose.connection.readyState >= 1) return;
+  
   if (!process.env.MONGODB_URI) {
     throw new Error("MONGODB_URI environment variable is required");
   }
-  if (!dbClient) {
-    dbClient = new MongoClient(process.env.MONGODB_URI);
-    await dbClient.connect();
+  
+  try {
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log("Connected to MongoDB Atlas via Mongoose");
+  } catch (error) {
+    console.error("MongoDB connection error:", error);
+    throw error;
   }
-  return dbClient.db("entries_db").collection("entries");
 }
 
 async function startServer() {
@@ -28,11 +42,11 @@ async function startServer() {
   // API routes
   app.get("/api/entries", async (req, res) => {
     try {
-      const collection = await getCollection();
-      const entries = await collection.find().sort({ createdAt: -1 }).toArray();
+      await connectToDatabase();
+      const entries = await Entry.find().sort({ createdAt: -1 });
       res.json(entries);
     } catch (error) {
-      console.error(error);
+      console.error("GET /api/entries error:", error);
       res.status(500).json({ error: "Failed to fetch entries" });
     }
   });
@@ -40,21 +54,18 @@ async function startServer() {
   app.post("/api/entries", async (req, res) => {
     try {
       const { name, salary, amount } = req.body;
-      if (!name || !salary || !amount || salary <= 0 || amount <= 0) {
-        return res.status(400).json({ error: "Invalid input" });
+      
+      if (!name || salary === undefined || amount === undefined || salary <= 0 || amount <= 0) {
+        return res.status(400).json({ error: "Invalid input: Name, positive salary, and positive amount are required." });
       }
       
-      const collection = await getCollection();
-      const newEntry = {
-        name,
-        salary,
-        amount,
-        createdAt: new Date(),
-      };
-      const result = await collection.insertOne(newEntry);
-      res.status(201).json({ ...newEntry, _id: result.insertedId });
+      await connectToDatabase();
+      const newEntry = new Entry({ name, salary, amount });
+      const savedEntry = await newEntry.save();
+      
+      res.status(201).json(savedEntry);
     } catch (error) {
-      console.error(error);
+      console.error("POST /api/entries error:", error);
       res.status(500).json({ error: "Failed to create entry" });
     }
   });
